@@ -2,6 +2,11 @@ import re
 from nltk.tag import pos_tag
 from nltk import word_tokenize
 from nltk.stem.snowball import SnowballStemmer
+
+
+
+
+
 ############################
 class Title:
 
@@ -94,11 +99,13 @@ class Date:
 
 
     def __init__(self,tree,textnodes=[]):
-        self.date_mon_year_pattern = re.compile(r'([0-9]+[/\-. ][0-9]+?[/\-. ][0-9]+)')
-        self.yearpattern = re.compile(r'([0-9]{4}?[,.])')
+        self.date_mon_year_pattern = re.compile(r'([0-9]{1,2}[/\-. ][0-9]{1,2}?[/\-. ][0-9]{2,4})')
+        self.yearpattern = re.compile(r'([0-9]{2,4}?[,.])')
         self.date_mon_pattern = re.compile(r'([0-9]{1,2}?[,.])')
+        self.num_pattern = re.compile(r'[0-9]')
 
-        self.titlepos = 0
+
+        self.titlepos = -1
         self.days = {
         'monday':0,
         'tueday':0,
@@ -112,27 +119,31 @@ class Date:
         'jan':0,
         'feb':0,
         'mar':0,
-        'april':0,
+        'apr':0,
         'may':0,
-        'june':0,
-        'july':0,
+        'jun':0,
+        'jul':0,
         'aug':0,
-        'sept':0,
+        'sep':0,
         'oct':0,
         'nov':0,
         'dec':0
         }
         self.set_probable_title(tree)
         self.probable_title(textnodes, tree)
+        assert(self.titlepos>=0)
         self.curpos = 0
         self.maxnodes = len(textnodes)
+        self.previous = None
         return
 
 
     def features(self,parentpath,textvalue,tree):
+
         if self.curpos > self.maxnodes:
             self.curpos =  0
         feature = {}
+
         match = re.search(self.date_mon_year_pattern, textvalue )
         if match:
             feature['regexp']= 1
@@ -146,7 +157,7 @@ class Date:
         if match:
             feature['isdate_mon']= 1
 
-        newtext = ''.join(c if c.isalnum() else '' for c in textvalue)
+        newtext = ''.join(c if ord(c) <255 and ord(c)>0 and c.isalnum() else '' for c in textvalue)
         
         for each in self.months:
             if not each in newtext.lower():
@@ -159,17 +170,40 @@ class Date:
                 continue
             feature['isday'] = 1
             break;
-        #closeness to best title
-        feature['distance_from_title'] = abs(self.curpos-self.titlepos)
+        #Closness to title
+        if self.titlepos != -1:
+
+            feature['distance_from_title'] = self.curpos-self.titlepos
+        else:            
+            feature['distance_from_title'] = 0 #'uniform' everything is title
+
         def temp(x):
-                for each in ['copyright', 'published', 'updated']: 
-                    if each in x:
-                        return 1
-                return 0
-        feature['keywords'] = temp(textvalue.lower())
-        feature['length'] = len(textvalue.split(" "))
-        feature['bias'] = 1
-        feature['time'] = 1 if 'a.m' in textvalue.lower() or 'p.m' in textvalue.lower() else 0
+            for each in ['copyright', 'publish', 'update', 'upd', 'at']: 
+                if each in x:
+                    return 1
+            return 0 
+        if self.previous:
+            feature['previous_keywords'] = temp(self.previous)
+
+        def isdatetag(parentpath):
+            parent = tree.xpath(parentpath)
+            attributes = parent[0].items() if parent else  []
+            properties = {}
+            for name,value in attributes:
+                if 'date' in name or 'date' in value:
+                    return 1
+            return 0
+        #feature['wordlength'] = len(textvalue.split(" "))
+        #feature['bias'] = 1
+        feature['relative_position']  = self.curpos*1.0/(self.maxnodes)
+        feature['isdate_tag'] = isdatetag(parentpath)
+        cnt = 0
+        cnt = len(re.findall(self.num_pattern,textvalue))        
+        feature['number_ratio'] = cnt/(len(textvalue)+0.01)
+
+        
+
+        self.previous = newtext.lower()
         self.curpos+=1
 
         return feature
@@ -200,7 +234,7 @@ class BOW:
 
 
 
-class One:
+class Content:
     def __init__(self,tree):
         self.Open_class = {each.strip():0 for each in'NN,NNP,NNPS, NNS, POS , PDT, VB, VBD , VBG, VBN, VBP, VBZ'.split(',')}
         self.title = tree.xpath('//title')
@@ -223,16 +257,18 @@ class One:
         parent = tree.xpath(parentpath)[0]
         prev = parent.getprevious()
         next = parent.getnext()
-        features['parent_tag'] = parent_split[-1]
+        features['parent_tag'] = ''.join(filter( lambda x: x.isalpha(), parent_split[-1]))
+        #print features['parent_tag']
+        #raw_input()
         if not textvalue or len(textvalue.strip())==0 :
             return {}
         features['word_count'] = len(textvalue.strip().split(" "))
         
         fw = functional_word_ratio(textvalue,tree, self.Open_class)
-        af = appearance_features(parentpath.split('/'),tree)
+        af = appearance_features(parentpath,tree)
         rdf = {}
-        if features['parent_tag']!= 'title':
-            rdf, self.lastbestnode,self.lastbestvalue = distance_from_probable_title(textnode,tree,self.lastbestnode,self.lastbestvalue, self.title)
+        # if features['parent_tag']!= 'title':
+        #     rdf, self.lastbestnode,self.lastbestvalue = distance_from_probable_title(textnode,tree,self.lastbestnode,self.lastbestvalue, self.title)
         
         for each in af: features[each] = af[each]
         for each in fw: features[each] = fw[each]
@@ -325,7 +361,7 @@ def appearance_features(parentpath, tree):
             elif 'content' in temp or 'article' in temp or 'body' in temp:
                 properties['class'] = 'content'
 
-    if properties !={}: print properties
+    #if properties !={}: print properties
     return properties
 
 

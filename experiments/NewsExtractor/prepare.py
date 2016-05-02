@@ -2,6 +2,9 @@ import sys
 import json
 import codecs
 
+import cookielib
+import urllib2
+
 import helper
 ###################################
 import lxml.html
@@ -33,7 +36,14 @@ def _match(tree, values, strict=True):
                 res.append(( (xpath[each][0], u'text'), parent.text))
         else:
             if each not in xpath:
-                print 'Cannot map %s No Entry at ' %(each)
+                print 'Cannot map %s No Entry at ' %(each)                
+                if len(each.strip())>0:
+                    print '---***---+++'*10
+                    for _,_,val in textnodes:
+                        print val
+                        print '---------'*10
+                    print '---***---+++'*10
+                    raw_input()
             else:
                 if not strict:
                     for parent in tree.xpath(xpath[each][0]):
@@ -56,13 +66,38 @@ def _match(tree, values, strict=True):
 
 def _clean(groundtruthpath, id, url, preparedirectory,strict=True):
         fnametruth = groundtruthpath +id+'.WithNode.groundtruth'
+        con = False
         try:
             data = json.load(codecs.open(fnametruth,'r', "utf-8"))
             _, values = zip(*data)
-            doc = lxml.html.parse(url) #############################PARSER###################
+
+            jar = cookielib.FileCookieJar("cookies")
+            opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(jar))
+            request = urllib2.Request(
+                    url,
+                    headers={'User-agent': 'Mozilla/5.0'})
+
+            try:
+                result = opener.open(
+                            request
+                            )
+            except Exception:
+                result = None
+                print 'Unable to parse ... check this place'
+
+            doc = lxml.html.parse(result) #############################PARSER###################
+        
             success, truth = _match(doc ,values,strict)
         except(ValueError):
             success,truth = True,[]
+        except(IOError):
+            print 'File %s Not found ' %fnametruth 
+            print 'Press Enter to continue, and R to remember the choice'
+            if con:
+                x =  raw_input()
+                con = (x == 'R')
+            success, truth = True, []
+
         if success:
             fname = preparedirectory +id+'.groundtruth'
             name = preparedirectory +id+'.WithNode.groundtruth'

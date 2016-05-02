@@ -31,6 +31,7 @@ def get_ordered_path_and_text(tree):
             if e.lower() in tag:
                 visibile = False
                 break
+        
         if visibile:
             assert(tree.xpath(path)[0].tail == each or tree.xpath(path)[0].text==each)
             if tree.xpath(path)[0].tail == each:
@@ -45,7 +46,8 @@ def get_tree(url):
 def extract_labels(textnodes, fname):
     print 'Extracting Labels'
     ftitle, ftitle_nonode, fbody, fbody_nonode, fdate, fdate_nonode = fname
-    Y = [0]*2*len(textnodes) #One for tail and one for text
+    #Y = [0]*2*len(textnodes) #One for tail and one for text
+    Y = [0]*len(textnodes) 
     try:
         with codecs.open(ftitle,'r', "utf-8") as fp:
             data_title = json.load(fp)
@@ -62,8 +64,8 @@ def extract_labels(textnodes, fname):
     try:
         with codecs.open(fdate,'r', "utf-8") as fp:
             data_date = json.load(fp)
-        print 'No Date %s' %fdate
     except(ValueError):
+        print 'No Date %s' %fdate
         data_date = []
 
     #print data[:3]
@@ -76,6 +78,7 @@ def extract_labels(textnodes, fname):
     cnt_t = 0
     cnt_b = 0
     cnt_d = 0
+    con = False
     _,_,_ = textnodes[0]
     for i,temp in enumerate(textnodes):
         parentpath,location,value = temp
@@ -86,25 +89,36 @@ def extract_labels(textnodes, fname):
             # print 'Number %d' %i
             # print value
             cnt_t+=1
-        elif unicode(parentpath+'_'+location) in d_b:
+        #Content and date overlap sometimes!! to allow that to happen
+        if unicode(parentpath+'_'+location) in d_b:
             Y[i] = 2
             cnt_b+=1
             #print '--***'*20
             #print value
-        elif unicode(parentpath+'_'+location) in d_d:
+        if unicode(parentpath+'_'+location) in d_d:
             Y[i] = 3
+            
             cnt_d+=1
     # print fname
     # for each in textnodes:
     #     print each, tree.xpath(each)
-    assert(cnt_t == len(d_t) and cnt_b == len(d_b)and cnt_d == len(d_d))
+    
+    try:
+
+        assert(cnt_t == len(d_t) and cnt_b == len(d_b)and cnt_d == len(d_d))
+    except:
+        print d_d
+        for each in textnodes:
+            print each
+        raw_input()
+
     return Y,d_t
 
 #You may want to edit this function if you want to change the parser
-def extract_features(textnodes, tree, featname='one'):
+def extract_features(textnodes, tree, featname='Content'):
     X = []
-    if featname == 'one':
-        f = feature.One(tree)
+    if featname == 'Content':
+        f = feature.Content(tree)
     elif featname == 'bow':
         f = feature.BOW()
     elif featname == 'Title':
@@ -151,21 +165,29 @@ def getexamples(trainfile, directory):
                 fids_dict[res] = 1
         print fids_dict
 
-        for each in fids_dict.keys(): 
-            if fids_dict[each] !=6:
+        for each in fids_dict.keys():  
+            if fids_dict[each] < 4: #Atleast 2 entries are found
                 del fids_dict[each]
+            # if fids_dict[each] !=6:  # Accept absent File as Null title only if specified
+            #     del fids_dict[each]
 
         print "keys %s" %fids_dict
         print len(fids_dict)
         urls = []
         fid = []
         td = open(trainfile)
+        tmp =  []
         for each in td.readlines():
             k = each.strip().split(',');
             if k[0] in fids_dict :
                 urls.append(k[1])
                 fid.append(k[0]) 
+            tmp.append(k[0])
 
+        print len(fid)
+        print 'Chopping off  to 10... experiment remove if you want to run on full data set'
+        return urls[15:30],fid[15:30]
+        #return urls[:],fid[:50]
         return urls,fid
 
 
@@ -188,86 +210,47 @@ if  __name__ == '__main__':
     fdate_nonode = map(lambda x: directory+'/Publish_date/'+x+'.groundtruth', fids)
     fnames = zip(ftitle, ftitle_nonode, fbody, fbody_nonode, fdate, fdate_nonode)
     idval = 0
-
-
-
-
-
-    #3 fold crossvalidation
-    np.random.seed(4)
-    splitval = 2
-    ind = range(splitval)*(len(urls)/splitval)
-    np.random.shuffle(ind)
     
-    for current in range(splitval):
-        feat = DictVectorizer(sparse=False)
-        featlist = []
-        for testind,eachurl,fname in zip(ind,urls,fnames):            
-            print fname
-            if testind == current:
-                continue
-            tree = get_tree(eachurl)
-            #textnodes = get_text_nodelist_dfs(tree)
-            textnodes = get_ordered_path_and_text(tree)
-            #_,_ = extract_labels(textnodes, fname)
-            featlist.extend(extract_features(textnodes, tree, featname))
+
+    feat = DictVectorizer(sparse=False)
+    featlist = []
+    for eachurl,fname in zip(urls,fnames):            
+        print fname            
+        tree = get_tree(eachurl)
+        #textnodes = get_text_nodelist_dfs(tree)
+        textnodes = get_ordered_path_and_text(tree)
+        #_,_ = extract_labels(textnodes, fname)
+        featlist.extend(extract_features(textnodes, tree, featname))
+    
+    
+    feat.fit(featlist)
+    with open(sys.argv[2]+'/train/featurenames.json', 'w') as outfile:
+                    json.dump(feat.feature_names_,outfile)
+    pickle.dump(feat,file(sys.argv[2]+'/train/featurevectorizer.dat','w'))
+
+    
+    for eachurl,fname in zip(urls,fnames):
+        tree = get_tree(eachurl)
+        #textnodes = get_text_nodelist_dfs(tree)
+        textnodes = get_ordered_path_and_text(tree)
+        textnodes_val = []
+        textnodes_val.extend(each for _,_,each in textnodes)
+        Y,_ = extract_labels(textnodes, fname)
+
+        #feat1 = pickle.load(file('thisfeature.data','r')) #Testin
+        X = feat.transform(extract_features(textnodes, tree, featname))
+        print 'Shape of X ', X.shape
+        x_tilde = []
+        for each in range(X.shape[0]): 
+            x_tilde.append([])
+            x_tilde[-1].extend([Y[each],])
+            x_tilde[-1].extend(X[each,:])  
+        x_tilde = np.array(x_tilde)
         
-        
-        feat.fit(featlist)
-        with open(sys.argv[2]+'/cv'+str(current+1)+'/train/featurenames.json', 'w') as outfile:
-                        json.dump(feat.feature_names_,outfile)
-        pickle.dump(feat,file(sys.argv[2]+'/cv'+str(current+1)+'/train/thisfeature.data','w'))
-
-        
-        for testind,eachurl,fname in zip(ind,urls,fnames):
-            tree = get_tree(eachurl)
-            #textnodes = get_text_nodelist_dfs(tree)
-            textnodes = get_ordered_path_and_text(tree)
-            textnodes_val = []
-            textnodes_val.extend(each for _,_,each in textnodes)
-            Y,_ = extract_labels(textnodes, fname)
-            
-            #feat1 = pickle.load(file('thisfeature.data','r')) #Testin
-            X = feat.transform(extract_features(textnodes, tree, featname))
-            print 'Shape of X ', X.shape
-            #assert(False)
-            x_tilde = []
-            for each in range(X.shape[0]): 
-                x_tilde.append([])
-                x_tilde[-1].extend([Y[each],])
-                x_tilde[-1].extend(X[each,:])  
-            x_tilde = np.array(x_tilde)
-
-            if testind != current:
-                np.save(sys.argv[2]+'/cv'+str(current+1)+'/train/example_'+str(fname[0].split('/')[-1].split('.')[0]), np.array(x_tilde))
-                with open(sys.argv[2]+'/cv'+str(current+1)+'/train/example_'+str(fname[0].split('/')[-1].split('.')[0])+'.json', 'w') as outfile:
-                        json.dump(textnodes_val, outfile)
-            else:
-                np.save(sys.argv[2]+'/cv'+str(current+1)+'/test/example_'+str(fname[0].split('/')[-1].split('.')[0]), np.array(x_tilde))
-                with open(sys.argv[2]+'/cv'+str(current+1)+'/test/example_'+str(fname[0].split('/')[-1].split('.')[0])+'.json', 'w') as outfile:
-                        json.dump(textnodes_val,outfile)
+        np.save(sys.argv[2]+'/train/example_'+str(fname[0].split('/')[-1].split('.')[0]), np.array(x_tilde))
+        with open(sys.argv[2]+'/train/example_'+str(fname[0].split('/')[-1].split('.')[0])+'.json', 'w') as outfile:
+                json.dump(textnodes_val, outfile)
 
 
-    # cnt = 0
-    # for testind,eachurl,fname in zip(ind,urls,fnames):
-    #     print fname
-    #     tree = get_tree(eachurl)
-    #     idval+=1
-    #     #textnodes = get_text_nodelist(tree)
-    #     textnodes = get_text_nodelist_dfs(tree)
-    #     textnodes_val = []
-    #     textnodes_val.extend(tree.xpath(each) for each in textnodes)
-    #     Y,d = extract_labels(textnodes, fname)
-    #     X,featurenames = extract_features(textnodes,tree)
-    #     x_tilde = [[y,]+x for y,x in zip(Y,X)]
-    #     for i in range(splitval):
-    #         if i != testind:
-    #             np.save(sys.argv[2]+'/cv'+str(i+1)+'/train/example_'+str(fname[0].split('/')[-1].split('.')[0]), np.array(x_tilde))
-            
-    #             with open(sys.argv[2]+'/cv'+str(i+1)+'/train/example_'+str(fname[0].split('/')[-1].split('.')[0])+'.json', 'w') as outfile:
-    #                     json.dump(textnodes_val,outfile)
-    #         else:
-    #             np.save(sys.argv[2]+'/cv'+str(i+1)+'/test/example_'+str(fname[0].split('/')[-1].split('.')[0]), np.array(x_tilde))
-    #             with open(sys.argv[2]+'/cv'+str(i+1)+'/test/example_'+str(fname[0].split('/')[-1].split('.')[0])+'.json', 'w') as outfile:
-    #                     json.dump(textnodes_val,outfile)
+
     print 'Done creating training and test split'

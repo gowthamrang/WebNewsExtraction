@@ -1,7 +1,10 @@
+echo $1
+a='feature'
+echo $1$a
 echo "Flushing out old data"
-rm -r ../../data/Datefeature
+#rm -r ../../data/$1$a
 echo "Creating new directory structure"
-mkdir -p ../../data/temp/Body ../../data/temp/Publish_date ../../data/temp/Title ../../data/Datefeature/cv1/train ../../data/Datefeature/cv2/train ../../data/Datefeature/cv3/train ../../data/Datefeature/cv4/train ../../data/Datefeature/cv5/train ../../data/Datefeature/cv1/test ../../data/Datefeature/cv2/test ../../data/Datefeature/cv3/test ../../data/Datefeature/cv4/test ../../data/Datefeature/cv5/test
+mkdir -p ../../data/temp/Body ../../data/temp/Publish_date ../../data/temp/Title ../../data/$1$a/train
 python prepare.py ../../data/train/field.csv ../../data/V2.0 ../../data/temp 
-python helper.py ../../data/temp ../../data/Datefeature Date
+python helper.py ../../data/temp ../../data/$1$a $1
 
