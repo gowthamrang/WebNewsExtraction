@@ -37,13 +37,13 @@ def _match(tree, values, strict=True):
         else:
             if each not in xpath:
                 print 'Cannot map %s No Entry at ' %(each)                
-                if len(each.strip())>0:
-                    print '---***---+++'*10
-                    for _,_,val in textnodes:
-                        print val
-                        print '---------'*10
-                    print '---***---+++'*10
-                    raw_input()
+                # if len(each.strip())>0:
+                #     print '---***---+++'*10
+                #     for _,_,val in textnodes:
+                #         print val
+                #         print '---------'*10
+                #     print '---***---+++'*10
+                #     raw_input()
             else:
                 if not strict:
                     for parent in tree.xpath(xpath[each][0]):

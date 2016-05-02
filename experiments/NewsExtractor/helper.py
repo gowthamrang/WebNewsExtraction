@@ -186,7 +186,7 @@ def getexamples(trainfile, directory):
 
         print len(fid)
         print 'Chopping off  to 10... experiment remove if you want to run on full data set'
-        return urls[15:30],fid[15:30]
+        return urls[:10],fid[:10]
         #return urls[:],fid[:50]
         return urls,fid
 
