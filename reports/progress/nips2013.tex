@@ -1,0 +1,281 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{nips13submit_e,times}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{graphicx}
+
+
+\title{WebNewsExtraction}
+
+
+\author{
+Gowtham Rangarajan R \\
+Department of Computer Science\\
+University of Massachusetts, Amherst 01002 \\
+\texttt{hippo@cs.cranberry-lemon.edu} \\
+}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to \LaTeX{} to determine where to break
+% the lines. Using \AND forces a linebreak at that point. So, if \LaTeX{}
+% puts 3 of 4 authors names on the first line, and the last on the second
+% line, try using \AND instead of \And before the third author name.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+%\nipsfinalcopy % Uncomment for camera-ready version
+
+\begin{document}
+
+
+\maketitle
+
+% \begin{abstract}
+% The abstract paragraph should be indented 1/2~inch (3~picas) on both left and
+% right-hand margins. Use 10~point type, with a vertical spacing of 11~points.
+% The word \textbf{Abstract} must be centered, bold, and in point size 12. Two
+% line spaces precede the abstract. The abstract must be limited to one
+% paragraph.
+% \end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+This report presents a solution to extracting Title, Published Date (referred to as date elsewhere in the report) and Content elements from web-news articles using machine learning methods. 
+The explosive growth of internet has resulted in an exponentially growing number of news articles every year. This vast resource of news-items could be mined to learn more about the society. Consequentially, there has been growing interest in automatically extracting structured information from them.  To this end, we recognize the importance of a text extraction system that provides a structured representation of web news article identifying an article's title, publish Date and main content. Extracting content may not be straightforward using heuristic based approach because of the evolving nature of web. Further more, far less time can be spent in training statistical machine learning classifiers than coming up with carefully handcrafted if-else / regular expressions statements that keeps up with the evolving web and that works across a wide array of web articles. \\
+The are two main contributions, of this report, to tackle the problem mentioned above are\\
+\begin{itemize}
+    \item Introduction of a web annotation tool and an alignment tool to annotate HTML pages and convert them into feature vectors that can be used for learning 
+    \item A classifier that uses the above set up to identify title, published date and main content from a webnews article
+\end{itemize}
+% 1. Introduction of a web annotation tool and an alignment tool to annotate HTML pages and convert them into feature vectors that can be used for learning \\
+% 2. A classifier that uses the above set up to identify title, published date and main content from a webnews article \\
+
+The report is organized into 5 sections . Section \ref{sec:relwork} discusses related work in a close but related field of content extraction. Section \ref{sec:Dataset} briefly presents an overview of the proposed solution and describes the dataset that was collected . Section \ref{sec:feat} discusses the features and the learning methods that were used for this task. Section \ref{sec:software} attempts to be a documentation for the software proposed. Section \ref{sec:conclusion} concludes with the results obtained for the task and discusses about possible useful extensions to the work.\\
+
+
+
+\section{Related work}
+\label{sec:relwork}
+
+Content extraction techniques from HTML documents have been well studied over the past two decades. They were introduced early in the last decade by Rahman et al., \cite{rahmanunderstanding} and since then numerous techniques have been developed. These techniques initially focused on creating regular expressions on plain text to identify content \cite{Adelberg:1998:NTS:276305.276330} , creating custom extractors for websites \cite{buyukkoktenaccordion}, exploiting the DOM tree representation for clues \cite{Gupta:2003:DCE:775152.775182} etc.,. The biggest disadvantage with these is the need to design intelligent heuristic/regular expressions to capture non-content blocks of text that works well across domains. Moreover, the evolving nature of web poses a significant amount of effort in extending the shelf life of such systems. Despite these potential drawbacks few  popular open source software [Goose] use heuristic techniques and regular-expressions to extract relevant content. 
+
+During the later half of the decade, the research progressed towards using intra domain DOM tree template matching algorithms \cite{lin2002discovering}. These algorithms required a significant deal of analysis for a specific domain before being production ready. Their failure to adapt to unseen websites restricts their applicability severely in the modern web. During the same period, heuristics that capture content  \cite{pinto2002quasm} were proposed. These heuristics remain relevant as features for machine learning techniques to determine content. During the recent half of the decade there has been interest in  treating the task as supervised machine learning problem \cite{Kohlschutter:2010:BDU:1718487.1718542}  \cite{gottron2008content} and proposing relevant features \cite{weninger2008tex}. Kohlschutter et., al \cite{Kohlschutter:2010:BDU:1718487.1718542} introduced shallow text features such as average word length, captilization ratio link density to distinguish content from boilerplate. Weninger et., al \cite{weninger2008text} introduced CETR content  which computes the number of words under a particular tag and uses them as features. Document Slope Curves were introduced by Gottron. He later introduced an Advanced DSC (ADSC) \cite{gottron2008content} in which a windowing technique is used to locate document regions in which word tokens are more frequent than tag tokens. These Features are either extracted from the DOM node \cite{Kohlschutter:2010:BDU:1718487.1718542} \cite{gottron2008content} or by considering line breaks \cite{weninger2008tex}and  are learnt using K-mean \cite{weninger2008text} or decision trees \cite{Kohlschutter:2010:BDU:1718487.1718542}. Most of these features have been benchmarked by Weninger. et., al \cite{weninger2010cetr} recently. Conditional Random Fields have also been used to clean up webpages.  \cite{marek2007web}. 
+
+There has also been recent interest in using vision based methods \cite{Bar-Yossef:2002:TDV:511446.511522} \cite{Chen:2006:TDL:1141277.1141534} where the DOM tree is clustered based on the visual content of partially rendered pages \cite{Dan:hybrid2013}. However, recent popular open source software use supervised learning methods (readability, boilerpipe) or hand engineered regular expressions (goose) to keep up with the modern day web. 
+% There has been a significant amount work in the field of feature extraction for supervised/ unsupervised machine learning for the task. Features are extracted from either the DOM node \cite{Kohlschutter:2010:BDU:1718487.1718542} \cite{gottron2008content}or through line breaks \cite{weninger2008tex} and they are learnt using K-mean \cite{weninger2008tex} or decision trees \cite{Kohlschutter:2010:BDU:1718487.1718542}. Kolchuster et., al \cite{Kohlschutter:2010:BDU:1718487.1718542} introduced shallow text features such as average word length, captilization ratio link density. These features have been quiet successful in distinguishing content from boilerplate. Tim et., al introduced CETR content  which estimates the number of words unders a particular tag \cite{weninger2008text}. Document Slope Curves were introduced by Gottron. He later introduced an Advanced DSC (ADSC) \cite{gottron2008content} in which a windowing technique is used to locate document regions in which word tokens are more frequent than tag tokens. Conditional Random Fields have also been used to clean up webpages.  \cite{marek2007web}
+
+
+
+% ?\section{Dataset}
+% A Web-news article contains a lot more information besides the main 'content' such as ads, navigation links, comment sections, related videos, etc., It is essential to extract clean text from the clutter to further analyse the data. Identifying clean text may not be straightforward using heuristic based approach because of the evolving nature of web. Machine learning approaches to these problems are maintainable and they can have a longer shelf life than the heuristic based approach. In this project, I attempt to use machine learning techniques to identify title, published date and main content from a webnews article. This problem is posed as a supervised classification problem. 
+\section{Dataset}
+\label{sec:Dataset}
+\subsection{Overview}
+A webpage could be represented as a DOM tree, whose leaf nodes contain text that may or may not appear on the screen. Our goal is to classify these leaf nodes into 4 classes namely title, content, date and boilerplate. We pose the above problem as a supervised learning problem, where we collect the ground truth data that contains text nodes and its corresponding class. We obtain the ground truth DOM nodes by manually annotating web news articles and collecting them using a chrome extension developed for this project. We perform an inorder traversal of the DOM nodes and collect the text nodes to be classified and match them with the ground truth data. We use this path information obtained during the inorder traversal (which is assumed to be the order in which an HTML page appears on the screen) of the DOM tree and use the properties of the node along with other relevant information from the DOM tree and extract features for each of these nodes. These labeled examples along with their feature vectors, that are represented as matrices, are used with different machine learning algorithms to find the best estimator for the task. \\
+
+\subsection{Dataset}
+Around 250 webpages were annotated with title, content and published date (date). Each annotated webpage consisted of a list of tuple containing the xpath expression from the root of the DOM tree and the textcontent of selected nodes that correspond to title, content and date along with the selected text for these classes (\ref{fig:dataset}) . Both these information were collected since there was a possibility that the selected text may not entirely match the text present in a text node. 
+% Around \textbf{fill here} number of collected nodes were only partially filled. 
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=12cm]{figures/t1}
+\end{center}
+\caption{Dataset: Groundtruth examples collected. Left: example fid.WithNode.groundtruthdata, Right: example fid.groundtruthdata}\label{fig:dataset}
+\end{figure}
+
+
+
+% For the rest of the work here we consider the collected nodes to be a labelled example node.
+The collected dataset is different from the datasets  \cite{baroni2008cleaneval}\cite{peters2013content} that are used for a similar task, where only the text information is collected which is later matched with the list of textnodes using an LCS procedure, because we wanted to locate the ground truth nodes exactly rather than approximately. The implementation details of the extension and the aligning procedure is postponed till section \ref{sec:software}.
+
+\begin{table}
+\begin{tabular}{ | c |c | p{50mm}  } 
+\hline
+\hline
+Folder & Filename & Description  \\
+\hline
+\hline
+train/& field.csv & columns having  fileid archived\_url and url  \\ 
+\hline
+FullDataset/Title& fileid.groundtruth &  Title text  \\   
+FullDataset/Title& Title/fileid.WithNode.groundtruth& json array of list of xpathexpression, textvalue at node\\
+\hline
+FullDataset/Publish\_Date & fileid.groundtruth & Date text   \\ 
+FullDataset/Publish\_Date &fileid.WithNode.groundtruth&json array of list of xpathexpression, textvalue at node\\
+\hline
+& Body/fileid.groundtruth & Body text  \\ 
+& Body/fileid.WithNode.groundtruth &json array of list of xpathexpression, textvalue at node \\
+\hline
+\hline
+\end{tabular}
+ \caption{Dataset: Description}\label{table:DatasetDescription}
+
+\end{table}
+
+The dataset released \ref{tab:dataset_description} contains train.csv having 3 columns namely fileids, archived URL (in hobbes) and the domain URL (just for exploratory purposes). The fileid column acts as a key that is used to match the collected data with the archived url. The dataset contains a \textit{FullDataset} folder which is parent to 3 different folders : \textit{Title}, \textit{Publish\_Date} and \textit{Body}. These folders contain the correspondingly annotated webnews article in the following pattern \textit{fid.groundtruth} and \textit{fid.WithNode.groundtruth}, (as the names suggest they are annotations with and without node information). The archived url is not considered to be annotated if and only if there isn't a body, title and a Date label with the corresponding fileid in the dataset. The absence of either a title class or a date class may indicate the absence of a good match for these classes in the  webpage. Please refer to the Table \ref{table:DatasetDescription} for more details
+
+% The collected dataset is present here \ref{}\\
+% The purpose of the software is to replace a human annotator who views a webpage and deciphers the title content and date of an article. Though one requires a headless web-browser to exactly reproduce the situation. THough I have not performed any experiments to prove the speed advatages of a html parser , it appears that way.
+
+\subsection{Exploratory analysis}
+The dataset consists of \textbf{269} webpages that were annotated from \textbf{239} unique domains, with an average of \textbf{1.13} news articles per domain. It has \textbf{65194} text nodes out of which only \textbf{266} nodes were classified as Title, \textbf{3803} represented content and \textbf{204} represented date. In other words, on an average, ~250 text nodes are present in a webpage out of which 15 nodes are classified as content and 1 as title and 1 as Date. Some of the domains that were visited include alaskadispatch.com ,dailytelegraph.com.au itv.com ,japantimes.co.jp etc.,. 
+
+% During the data collection process, it was found that atleast \textbf{Fill here} of the webpages were broken html pages.
+It has to be noted that the annotated news articles were in English. The data was annotated by a single person over a span of 7 hours.
+
+A naive classifier which classifies all text nodes as content leads to an Fscore of \textbf{0.11}, a better baseline that uses words count (of a node) (logistic regression) as a feature leads to an Fscore of \textbf{0.562} for the content class. The code for this analysis can be found in the ipython notebook that is present with the data set.\\
+
+
+
+
+
+\section{Feature Engineering and Learning}
+\label{sec:feat}
+A combination of features were used and analysed while implementing these classifiers. These features broadly fall into three categories: Language based features that analyse the content inside a text node, Location based features that measure the absolute or relative position of a node and appearance base features that drop hints about the appearance of a text node. These sets of features can be viewed as answers to the question where is the node located ? how does it appear ?  what does it contain ?. Language and appearance features corresponding to the close neighbours (previous/next leaf node) were also used.
+
+
+\subsection{Location features}
+These features, as the name indicates, measure the position of a node from a fixed or a variable reference. Two features were to obtain this measurement was introduced under this , one is the relative distance between the possible title of a webnews article and the node, the other one being the absolute position of the node. To calculate the first feature one needs to locate the title of an article. We can find the title by computing the edit distance between the text that is present under the DOM tree's Title  (not to be confused with the title class) or headline tag and the text node and identifying the text node (which is appears on the screen) with the lowest score as the Title of the webnews article. Once we ascertain the location of the title we can compute a node's relative position from the 'title text node'.
+
+\subsection{Appearance features}
+These features encode the appearance of a text node. We rely on semantic cues provided by html tags like h,b and the variable names used in a div to determine the appearance of the text. The appearance of a text node is obtained from the html tag that surrounds the text. The html tag and its properties relating to font/heading/header/footer are extracted.
+
+
+\subsection{Language features}
+These features are expected to capture the language details that distinguish content from boilerplate. Features that belongs to this category include functional word ratio, Word count, character count, isMonth, isdateregexp, isyear etc.,
+% Around \textbf{Fill here} features were considered and out of which only \textbf{fill here} were retained since others were statistically insignificant.
+
+\subsection{Learning}
+\subsubsection{Title Classifier}
+The goal of the title classifier is to figure out the best textnode that can be a title in a web news article. As discussed previously, one plausible candidate for this position is the one which has the least edit distance from the 'Title' or headline tag that is embedded in the html webpage. A text nodes html tag is also used as a feature. Hence, a simple classifier using these two features is proposed.
+
+
+\subsubsection{Publish Date Classifier}
+The goal of the Published Date classifier is to figure out the date (as it appears on the screen). Though there are meta tags that can be directly used to extract the published time they may not be reliable or they may not be present in a webpage. To handle this scenario, we introduce a machine learning based classifier that can extract the publish date of the article. Location features like a node's distance from the title etc., are used. 
+
+\subsubsection{Content Classifier}
+The goal of the Content classifier is to figure out the main content (as it appears on the screen). We define the main content of a web news article to be a domain agnostic article related to the headline. Thus copyright and  author information are excluded from the body. Locational features are currently not included in the current model. 
+
+% The machine learning pipeline consisted of a feature selection method followed by a classifier whose hyperparamteres were found using a (stratified) 5 fold crossvalidated fscore error measure and  randomized search. Support vector classifier, logistic regression classifier and a random forest classifier were explored for every class.
+
+% The best machine learning pipeline was identified after  a feature selection stage followed by a logistic regression classifier, randomforest and support vector classifier (whenever possible)  for each of the classes.The entire set up was evaluated on a stratified 5 fold cross validation setup to choose the best hyper parameters that maximized the mean fscore.
+
+
+% A 5 fold stratified cross validation and randomized search over the hyper parameters space was performed to obtain  to obtain RandomForest as the best natural classifier for this supervised problem. On hind sight this seems rational because of the lack of high number of positive examples and the high nonlinearity of the features especially with the distance measure. ie., If the node matches and if it is close to the title then the date can be the published date, the chances are very little if atleast one fails. I ran SVC, Logistic regression and RF. The result is tabulated below.
+
+% Different pipelines were tried to push the Fscore. Few of the interesting results are shown below.
+
+
+\section{Implementation}
+\label{sec:software}
+This section discusses briefly about the software implementation \cite{gowthamrangarajan:2016} that accompanies with this report. The software package consists of an extension that can be used to annotate data using the chrome web browser. Using this extension the user can select a region of text and classify it as Title or Body or Date. The extension collects the set of nodes that are selected and sends them to  a dropbox location using a deprecated dropbox API. Text data is stored in the utf8 format.
+
+The collected data is placed in the data subfolder and it is renamed to \textbf{FullDataset}. Inorder to use this annotated data , the user executes \textbf{prepare\_data.sh 'featurename'}. This bash script internally calls \textbf{prepare.py} which aligns the output from the parser with the groundtruth annotations. The alignment function (\textbf{match()} in \textbf{prepare.py}) matches the every text value in the collected text node with the ground truth data. If multiple exact matches are found, all of them are considered to be valid classes except in the case of content where the entire node is considered to be boilerplate. There could be a failure to match the text nodes,  and this is due to the parser's failure entirely. It is interesting to note that around $\frac{1}{10}^{th}$ of the web news items were not uniquely parse-able. After alinging, the parser generates an inorder traversed list of possible text nodes belonging to the webpage that needs to be classified. The aligned ground truth information is placed inside a temporary folder: \textbf{temp}.\\
+
+At this point the bash script calls \textbf{helper.py} with the aligned folder and the featurename. Now, every text node along with the webpage's DOM tree is identified and passed to  \textbf{extract\_feature()} in \textbf{helper.py}. Here, \textbf{extract\_feature()} creates the required feature instance (based on 'featurename') using \textbf{Feature.py}. This instance is used to calculate the set of features for every text node. This instance, on calling \textbf{extract\_features} returns a dictionary of activate features which is converterd to a vector using sklearns \textbf{dictvectorizer}.  At the end of this stage we obtain a Matrix where the rows denote a node and the columns denote the feature vector for that node. The first column in the generated matrix contain the classlabel (1 for Title, 2 for Content and 3 for Published\_Date). The feature matrix, stored in \textbf{data/'featurename'/feature/train}, of a webpage can be identified using the fileid present in \textbf{data/train/field.csv} along with the \textbf{vectorizer}. This data is used to learn a machine learning model for the problem and these models are stored in \textbf{NewsExtractor/models/} once they are complete and renamed to ensure they are appropriately loaded during classification time. 
+
+During classification time, the classifier \textbf{Newspaper.py} loads these models and computes the title date and Content.
+
+
+
+The software uses xpath expressions to navigate the DOM tree and extract features. It can support any parser as long as the parser can access DOM elements through xpath expressions. Currently,the software requires the webnews article to be a UTF8 encoded unicode.
+
+
+\section{Results and Discussion}
+\label{sec:conclusion}
+
+\begin{table}
+  \centering%
+  \begin{tabular}{||c c c c||} 
+ \hline
+ Method & Mean Fscore & std Fscore \\ [0.5ex] 
+ \hline
+ \hline
+ RandomForest & 0.584  & 0.038  \\
+ \hline
+ LogisticRegression & 0.365 & 0.030  \\
+ \hline
+ \hline
+\end{tabular}
+ \caption{Date Classifier : Cross validated Accuracy on 270 examples}\label{table:datefeat}
+\end{table}
+
+Randomforest classifier was chosen as the best learning algorithm for the task. It is important to mention here that this an Fscore and recall score of 0.5 translates into roughly getting the date right once in two webnews articles and predicting only one extra node as a Date. This could be a good score given the scarcity of the training data because a date occurs only once in ~400 nodes!
+
+
+\begin{table}
+  \centering%
+  \begin{tabular}{c|c|c}
+ \hline
+ Method & Mean Fscore & std Fscore  \\ [0.5ex] 
+ \hline
+ \hline
+ RandomForest (100 examples) & 0.542  & 0.031  \\
+ \hline
+ LogisticRegression (100 examples)& 0.642 & 0.020  \\
+ \hline
+ RandomForest (270 examples) & 0.668  & 0.038  \\
+ \hline
+ LogisticRegression (270 examples)& 0.697 & 0.002  \\
+ \hline
+ \hline
+
+  \end{tabular}
+ \caption{Content Classifier (appearance and language features only): 5 fold Cross validated Accuracy}\label{table:somename}
+\end{table}
+
+% The precision and recall scores for the classifier was 0.8060 and 0.61
+The precision and recall scores for the logistic regression classifier was \textbf{0.804} and \textbf{0.607}.
+
+The most informative features shown in the figure \ref{fig:disc} are surprisingly local neighbourhood appearance features! This clearly indicates we could much better language features would help boost the recall. If we look at the kinds of errors the classifier makes, which are mostly recall errors, we expect a CRF  to do better since A CRF takes the (net) effect of the content classifier on the neighbouring node into consideration.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=8cm]{figures/ContentDiscrimnatoryFeatures}
+\end{center}
+\caption{Content Classifier : Discriminatory Features}\label{fig:disc}
+\end{figure}
+
+\begin{table}
+  \centering%
+  \begin{tabular}{c|c|c}
+ \hline
+ Sentence & assigned label & true label  \\ [0.5ex] 
+ \hline\hline
+ \hline
+ . The story was updated on July 26 that year. & 0  & 1  \\
+ \hline
+ from Colorlines & 0 & 1  \\
+ \hline
+ , from an ongoing & 0  & 1  \\
+ \hline
+ 
+ \hline
+  \end{tabular}
+ \caption{Content Classifier (appearance and language features only): 5 fold Cross validated Accuracy}\label{table:somename}
+\end{table}
+
+
+
+
+
+
+% It is surprising to see logistic regression to do much better than randomforest consistently. This clearly indicates the classes are separated and better features are required to improve the accuracy.
+
+
+\subsection{Future Work}
+This work can be extended to  solve this problem in a semi supervised fashion. One straightforward method is to accept user supervision on data points that are near the decision boundary of the classifier. These datapoints could be classified for a better accuracy. The software might request the user for labelling specific points.
+
+A more sophisticated structured prediction algorithm could be applied to the problem. To detect multiple articles.
+
+
+\bibliographystyle{unsrt}
+\bibliography{sample}
+
+
+\end{document}
