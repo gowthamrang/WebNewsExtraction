@@ -79,7 +79,7 @@ def extract_labels(textnodes, fname):
     cnt_b = 0
     cnt_d = 0
     con = False
-    _,_,_ = textnodes[0]
+    #_,_,_ = textnodes[0]
     for i,temp in enumerate(textnodes):
         parentpath,location,value = temp
         #path is (parentpath,location)
@@ -186,7 +186,7 @@ def getexamples(trainfile, directory):
 
         print len(fid)
         print 'Chopping off  to 10... experiment remove if you want to run on full data set'
-        return urls[:10],fid[:10]
+        #return urls[:10],fid[:10]
         #return urls[:],fid[:50]
         return urls,fid
 

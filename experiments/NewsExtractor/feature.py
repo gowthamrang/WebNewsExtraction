@@ -89,7 +89,7 @@ class Date:
 
     def probable_title(self, textnodes,tree):
         if self.title != None:
-            remember = [(100,None)]         
+            remember = [(100,-1,None)]         
             for i,(parentpath,_,textvalue) in enumerate(textnodes):
                 remember.append((EditDistance(textvalue,self.title),i, textvalue))
             _,self.titlepos,_ = min(remember)
@@ -130,8 +130,8 @@ class Date:
         'dec':0
         }
         self.set_probable_title(tree)
-        self.probable_title(textnodes, tree)
-        assert(self.titlepos>=0)
+        self.probable_title(textnodes, tree)        
+        #assert(self.titlepos>=0)
         self.curpos = 0
         self.maxnodes = len(textnodes)
         self.previous = None
@@ -213,22 +213,6 @@ class Date:
 
 
 
-class BOW:
-    def __init__(self):
-        
-        self.stopwords = {each:0 for each in ["a", "about", "above", "above", "across", "after", "afterwards", "again", "against", "all", "almost", "alone", "along", "already", "also","although","always","am","among", "amongst", "amoungst", "amount",  "an", "and", "another", "any","anyhow","anyone","anything","anyway", "anywhere", "are", "around", "as",  "at", "back","be","became", "because","become","becomes", "becoming", "been", "before", "beforehand", "behind", "being", "below", "beside", "besides", "between", "beyond", "bill", "both", "bottom","but", "by", "call", "can", "cannot", "cant", "co", "con", "could", "couldnt", "cry", "de", "describe", "detail", "do", "done", "down", "due", "during", "each", "eg", "eight", "either", "eleven","else", "elsewhere", "empty", "enough", "etc", "even", "ever", "every", "everyone", "everything", "everywhere", "except", "few", "fifteen", "fify", "fill", "find", "fire", "first", "five", "for", "former", "formerly", "forty", "found", "four", "from", "front", "full", "further", "get", "give", "go", "had", "has", "hasnt", "have", "he", "hence", "her", "here", "hereafter", "hereby", "herein", "hereupon", "hers", "herself", "him", "himself", "his", "how", "however", "hundred", "ie", "if", "in", "inc", "indeed", "interest", "into", "is", "it", "its", "itself", "keep", "last", "latter", "latterly", "least", "less", "ltd", "made", "many", "may", "me", "meanwhile", "might", "mill", "mine", "more", "moreover", "most", "mostly", "move", "much", "must", "my", "myself", "name", "namely", "neither", "never", "nevertheless", "next", "nine", "no", "nobody", "none", "noone", "nor", "not", "nothing", "now", "nowhere", "of", "off", "often", "on", "once", "one", "only", "onto", "or", "other", "others", "otherwise", "our", "ours", "ourselves", "out", "over", "own","part", "per", "perhaps", "please", "put", "rather", "re", "same", "see", "seem", "seemed", "seeming", "seems", "serious", "several", "she", "should", "show", "side", "since", "sincere", "six", "sixty", "so", "some", "somehow", "someone", "something", "sometime", "sometimes", "somewhere", "still", "such", "system", "take", "ten", "than", "that", "the", "their", "them", "themselves", "then", "thence", "there", "thereafter", "thereby", "therefore", "therein", "thereupon", "these", "they", "thickv", "thin", "third", "this", "those", "though", "three", "through", "throughout", "thru", "thus", "to", "together", "too", "top", "toward", "towards", "twelve", "twenty", "two", "un", "under", "until", "up", "upon", "us", "very", "via", "was", "we", "well", "were", "what", "whatever", "when", "whence", "whenever", "where", "whereafter", "whereas", "whereby", "wherein", "whereupon", "wherever", "whether", "which", "while", "whither", "who", "whoever", "whole", "whom", "whose", "why", "will", "with", "within", "without", "would", "yet", "you", "your", "yours", "yourself", "yourselves", "the"]}
-        self.stemmer = SnowballStemmer("english")
-
-
-    def features(self,parentpath,textvalue,tree):
-        features = {}
-
-        for each in word_tokenize(textvalue):
-            if each.isalpha() and each.lower() not in self.stopwords:
-
-                features["BOW_"+self.stemmer.stem(each.lower())] = 1;
-        return features
-
 
 
 
@@ -266,18 +250,21 @@ class Content:
         
         fw = functional_word_ratio(textvalue,tree, self.Open_class)
         af = appearance_features(parentpath,tree)
-        rdf = {}
+        # rdf = {}
         # if features['parent_tag']!= 'title':
         #     rdf, self.lastbestnode,self.lastbestvalue = distance_from_probable_title(textnode,tree,self.lastbestnode,self.lastbestvalue, self.title)
         
         for each in af: features[each] = af[each]
         for each in fw: features[each] = fw[each]
-        for each in rdf: features[each] = rdf[each]
-        features['mspam'] = marketing_keyword_spam(textvalue, self.spamwords)
+        # for each in rdf: features[each] = rdf[each]
+        # features['mspam'] = marketing_keyword_spam(textvalue, self.spamwords)
         #short-neighbourhood
 
         features['previous_tag'] = prev.tag if prev is not None and type(prev.tag)==str else '__empty__'
         features['next_tag'] = next.tag if next is not None and type(next.tag)==str else '__empty__'
+        features['previous_word_count'] = len(prev.text.split(" ")) if prev is not None and prev.text is not None else len(prev.tail.split(" ")) if prev is not None and prev.tail is not None else 0
+        features['next_word_count'] = len(next.text.split(" ")) if next is not None and next.text is not None else len(next.tail.split(" ")) if next is not None and next.tail is not None else 0
+
 
         #long-term
         #how long are we past main content?

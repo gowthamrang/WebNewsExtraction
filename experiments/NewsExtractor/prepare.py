@@ -82,8 +82,9 @@ def _clean(groundtruthpath, id, url, preparedirectory,strict=True):
                             request
                             )
             except Exception:
-                result = None
-                print 'Unable to parse ... check this place'
+                result = url
+                #print 'Unable to parse ... check this place'
+
 
             doc = lxml.html.parse(result) #############################PARSER###################
         

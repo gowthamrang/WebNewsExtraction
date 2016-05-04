@@ -3,6 +3,7 @@
 import lxml.html
 import helper
 import pickle
+import os
 
 from classifier.TitleClassifier import TitleClassifier
 from sklearn.feature_extraction import DictVectorizer
@@ -27,19 +28,22 @@ from sklearn.cross_validation import StratifiedKFold
 class NewsExtractor:
 	def __init__(self):
 		"""Use this space to load trained classifier instances"""
+		self.rootpath = '/'.join(os.path.realpath(__file__).split('/')[:-1])
 		#self.title_classifier_instance = TitleClassifier()
-		self.title_classifier_instance = pickle.load(file('models/Title.classifier'))
-		self.content_classifier_instance = pickle.load(file('models/Content.classifier'))
-		self.date_classifier_instance = pickle.load(file('models/Date.classifier'))
+		self.title_classifier_instance = pickle.load(file(self.rootpath+'/models/Title.classifier'))
+		self.content_classifier_instance = pickle.load(file(self.rootpath+'/models/Content.classifier'))
+		self.date_classifier_instance = pickle.load(file(self.rootpath+'/models/Date.classifier'))
 
 
-		self.title_feature_vectorizer = pickle.load(file('models/Title_featurevectorizer.dat'))
-		self.content_feature_vectorizer = pickle.load(file('models/Content_featurevectorizer.dat'))
-		self.date_feature_vectorizer = pickle.load(file('models/Date_featurevectorizer.dat'))
+		self.title_feature_vectorizer = pickle.load(file(self.rootpath+'/models/Title_featurevectorizer.dat'))
+		self.content_feature_vectorizer = pickle.load(file(self.rootpath+'/models/Content_featurevectorizer.dat'))
+		self.date_feature_vectorizer = pickle.load(file(self.rootpath+'/models/Date_featurevectorizer.dat'))
 
 		self.title = ''
 		self.content = ''
 		self.date = ''
+
+
 
 
 	def predict(self,filename=None):
