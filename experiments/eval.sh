@@ -1,0 +1,1 @@
+python eval.py  ../data/FullDataset  ../data/train/field.csv

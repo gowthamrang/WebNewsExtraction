@@ -39,6 +39,7 @@ NW = NewsExtractor()
 	print 'Content is %s ' %unicode(NW.content)
 ```
 
-Please refer to the report for the FSs design and other details.
 
-## Resources
+### Benchmarking
+run ```bash eval.sh``` to run the compare Newspaper,LibExtract,Goose and Boilerpipe . Ensure that these modules are installed in your machine. The evaluation runs for 100 files computing fscores for each document (Bag of words assumption). These fscores are finally recorded in Body_eval.txt and Title_eval.txt
+
