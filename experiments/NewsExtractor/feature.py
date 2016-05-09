@@ -22,7 +22,7 @@ class Title:
                 self.title = None
             else:
                 self.title =  good_candidate[0]
-                print 'Goodie from META', self.title
+                #print 'Goodie from META', self.title
         except:
             self.title = None
         self.bestvalue, self.editscore = None, 100
@@ -34,7 +34,7 @@ class Title:
         if good_candidate and not self.title:          
             self.title = good_candidate[0] if good_candidate[0] is not None else None
         
-        print 'Goodie' ,self.title
+        #print 'Goodie' ,self.title
         return
 
 
@@ -47,7 +47,7 @@ class Title:
                 remember.append((EditDistance(textvalue,self.title), textvalue))
             self.editscore, self.bestvalue = min(remember)
             #print sorted(remember)[:100]
-            print 'HERE YE %s %d' %(self.bestvalue,self.editscore)
+            #print 'HERE YE %s %d' %(self.bestvalue,self.editscore)
         return;
 
     def features(self,parentpath,textvalue,tree):
@@ -72,7 +72,7 @@ class Date:
                 self.title = None
             else:
                 self.title =  good_candidate[0]
-                print 'Goodie from META', self.title
+                #print 'Goodie from META', self.title
         except:
             self.title = None
         self.bestvalue, self.editscore = None, 100
@@ -84,7 +84,7 @@ class Date:
         if good_candidate and not self.title:          
             self.title = good_candidate[0] if good_candidate[0] is not None else None
         
-        print 'Goodie' ,self.title
+        #print 'Goodie' ,self.title
         return
 
     def probable_title(self, textnodes,tree):
@@ -147,7 +147,7 @@ class Date:
         match = re.search(self.date_mon_year_pattern, textvalue )
         if match:
             feature['regexp']= 1
-            print 'Regexp Match %s' %textvalue
+            #print 'Regexp Match %s' %textvalue
         match = re.search(self.yearpattern, textvalue )
         if match:
             feature['isyear']= 1
