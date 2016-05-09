@@ -12,7 +12,7 @@ from sklearn.feature_extraction import DictVectorizer
 import feature
 
 def get_ordered_path_and_text(tree):
-    print 'Get Inordered Nodes'
+    #print 'Get Inordered Nodes'
     texts = tree.xpath('//text()')
     textnodes = []
     for each in texts:
