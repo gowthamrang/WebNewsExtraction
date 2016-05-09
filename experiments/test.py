@@ -3,7 +3,7 @@ from NewsExtractor import NewsExtractor
 if __name__== '__main__':
 	print os.path.realpath(__file__)
 
-	NW = NewsExtractor.NewsExtractor()
+	NW = NewsExtractor()
 	NW.predict('http://www.dailythanthi.com/News/Districts/Chennai/2016/04/27013547/TASMAC-make-money--Attempted-robberyGuardianCut-and.vpf')
 	print '---**'*10
 	print 'Title'

@@ -136,7 +136,7 @@ def extract_features(textnodes, tree, featname='Content'):
     # print zip(X,textnodes)
     return X
 
-def getexamples(trainfile, directory):
+def getexamples(trainfile, directory, strict=False):
 
         groundtruthpath = directory
         print 'groundtruthpath %s' %groundtruthpath
@@ -166,10 +166,12 @@ def getexamples(trainfile, directory):
         print fids_dict
 
         for each in fids_dict.keys():  
-            if fids_dict[each] < 4: #Atleast 2 entries are found
-                del fids_dict[each]
-            # if fids_dict[each] !=6:  # Accept absent File as Null title only if specified
-            #     del fids_dict[each]
+            if not strict:
+                if fids_dict[each] < 4: #Atleast 2 entries are found
+                    del fids_dict[each]
+            else:
+                if fids_dict[each] !=6:  # Accept absent File as Null title only if specified
+                    del fids_dict[each]
 
         print "keys %s" %fids_dict
         print len(fids_dict)
